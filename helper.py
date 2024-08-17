@@ -1,8 +1,8 @@
 # Migrate data to the appropriate format
 import pandas as pd
 
-input_file = 'data.csv'
-output_file = 'reduced_data.csv'
+input_file = 'data-new.csv'
+output_file = 'data.csv'
 
 df = pd.read_csv(input_file)
 
