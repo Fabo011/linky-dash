@@ -1,6 +1,8 @@
 from dash import Dash, dash_table, dcc, html, Input, Output, State, callback
 import pandas as pd
 import dash_auth
+import webbrowser
+import json
 
 # Path to your CSV file
 csv = './data.csv'
@@ -73,6 +75,7 @@ app.layout = html.Div([
         }]
     ),
     html.Div(id='datatable-interactivity-container'),
+    html.Div(id='hidden-div', style={'display': 'none'})  # Hidden Div for storing URLs
 ], style={'width': '100%', 'display': 'block', 'padding': '20px'})  # Ensuring full width and padding
 
 # Combined Callback for Loading and Modifying Data
@@ -142,5 +145,19 @@ def update_graphs(rows, derived_virtual_selected_rows):
         for column in ["pop", "lifeExp", "category"] if column in dff
     ]
 
+# Callback to open URLs in a new tab
+@callback(
+    Output('hidden-div', 'children'),
+    Input('datatable-interactivity', 'selected_rows'),
+    State('datatable-interactivity', 'data')
+)
+def open_links(selected_rows, data):
+    if selected_rows:
+        df = pd.DataFrame(data)
+        urls = df.loc[selected_rows, 'link'].tolist()
+        for url in urls:
+            webbrowser.open(url, new=2)  # Open URL in a new tab of the default browser
+    return json.dumps({"status": "done"})  # Return some value to trigger the callback
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run_server(debug=True)
