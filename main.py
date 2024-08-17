@@ -1,7 +1,7 @@
 from dash import Dash, dcc, html, Input, Output, State, callback, ctx, dash_table
 import dash
-import pandas as pd
 import dash_auth
+import pandas as pd
 import webbrowser
 import json
 import os
@@ -17,7 +17,9 @@ VALID_USERNAME_PASSWORD_PAIRS = {
     os.getenv('USERNAME'): os.getenv('PASSWORD')
 }
 
-app = Dash(__name__, external_stylesheets=external_stylesheets)
+# Generate or set your secret key
+app = Dash(__name__, external_stylesheets=external_stylesheets, suppress_callback_exceptions=True)
+app.server.secret_key = os.urandom(24)  # Set the secret key
 
 auth = dash_auth.BasicAuth(
     app,
