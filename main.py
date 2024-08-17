@@ -3,6 +3,9 @@ import pandas as pd
 import dash_auth
 import webbrowser
 import json
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # Path to your CSV file
 csv = './data.csv'
@@ -10,7 +13,7 @@ csv = './data.csv'
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 VALID_USERNAME_PASSWORD_PAIRS = {
-    'admin': 'admin'
+    os.getenv('USERNAME'): os.getenv('PASSWORD')
 }
 
 app = Dash(__name__, external_stylesheets=external_stylesheets)
