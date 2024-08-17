@@ -1,4 +1,5 @@
-from dash import Dash, dash_table, dcc, html, Input, Output, State, callback
+from dash import Dash, dcc, html, Input, Output, State, callback, ctx, dash_table
+import dash
 import pandas as pd
 import dash_auth
 import webbrowser
@@ -32,6 +33,28 @@ def load_data():
     return df
 
 app.layout = html.Div([
+    html.Button("Add New Link", id="open-modal", n_clicks=0),
+    
+    # Modal for adding new row
+    html.Div(
+        id="modal",
+        children=[
+            html.Div(
+                children=[
+                    html.H2("Add New Data"),
+                    dcc.Input(id='input-linkname', type='text', placeholder='Link Name'),
+                    dcc.Input(id='input-linkdescription', type='text', placeholder='Link Description'),
+                    dcc.Input(id='input-category', type='text', placeholder='Category'),
+                    dcc.Input(id='input-link', type='text', placeholder='Link'),
+                    html.Button('Submit', id='submit-button', n_clicks=0),
+                    html.Button('Close', id='close-modal', n_clicks=0),
+                ],
+                style={'padding': '20px'}
+            )
+        ],
+        style={'display': 'none', 'position': 'fixed', 'top': '20%', 'left': '30%', 'width': '40%', 'backgroundColor': 'white', 'border': '1px solid black', 'zIndex': '1000'}
+    ),
+    
     dash_table.DataTable(
         id='datatable-interactivity',
         columns=[
@@ -81,33 +104,54 @@ app.layout = html.Div([
     html.Div(id='hidden-div', style={'display': 'none'})  # Hidden Div for storing URLs
 ], style={'width': '100%', 'display': 'block', 'padding': '20px'})  # Ensuring full width and padding
 
-# Combined Callback for Loading and Modifying Data
 @callback(
     Output('datatable-interactivity', 'data'),
+    Output('modal', 'style'),
     Input('datatable-interactivity', 'data'),
-    State('datatable-interactivity', 'data_previous')
+    Input('submit-button', 'n_clicks'),
+    Input('open-modal', 'n_clicks'),
+    Input('close-modal', 'n_clicks'),
+    State('input-linkname', 'value'),
+    State('input-linkdescription', 'value'),
+    State('input-category', 'value'),
+    State('input-link', 'value'),
+    State('datatable-interactivity', 'data_previous'),
 )
-def manage_data(current_data, previous_data):
-    df = load_data()  # Load the latest data
+def update_data_table(data, submit_n_clicks, open_modal_n_clicks, close_modal_n_clicks,
+                       linkname, linkdescription, category, link, previous_data):
+    trigger_id = ctx.triggered_id
 
-    # If previous_data is None, it's the initial page load
+    # Load the latest data
+    df = load_data()
+
+    if trigger_id == 'submit-button':
+        # Create a new row DataFrame
+        new_row = pd.DataFrame([{'linkname': linkname, 'linkdescription': linkdescription, 'category': category, 'link': link}])
+        
+        # Concatenate new row with existing DataFrame
+        df = pd.concat([df, new_row], ignore_index=True)
+        df.to_csv(csv, index=False)
+        return df.to_dict('records'), {'display': 'none'}
+    
+    if trigger_id == 'open-modal':
+        return dash.no_update, {'display': 'block', 'position': 'fixed', 'top': '20%', 'left': '30%', 'width': '40%', 'backgroundColor': 'white', 'border': '1px solid black', 'zIndex': '1000'}
+    
+    if trigger_id == 'close-modal':
+        return dash.no_update, {'display': 'none'}
+
     if previous_data is None:
-        return df.to_dict('records')
+        return df.to_dict('records'), dash.no_update
 
-    # If there is previous data, handle modifications
-    current_df = pd.DataFrame(current_data)
+    # Handle updates or deletions
+    current_df = pd.DataFrame(data)
     previous_df = pd.DataFrame(previous_data)
-
-    # Handle deletions: Rows in previous_data but not in current_data
     deleted_rows = previous_df.merge(current_df, how='outer', indicator=True).loc[lambda x: x['_merge'] == 'left_only']
     if not deleted_rows.empty:
         current_df.to_csv(csv, index=False)
-        return load_data().to_dict('records')
+        return load_data().to_dict('records'), dash.no_update
 
-    # Handle updates: Save all changes back to CSV
     current_df.to_csv(csv, index=False)
-
-    return current_df.to_dict('records')
+    return current_df.to_dict('records'), dash.no_update
 
 @callback(
     Output('datatable-interactivity-container', "children"),
@@ -148,7 +192,6 @@ def update_graphs(rows, derived_virtual_selected_rows):
         for column in ["pop", "lifeExp", "category"] if column in dff
     ]
 
-# Callback to open URLs in a new tab
 @callback(
     Output('hidden-div', 'children'),
     Input('datatable-interactivity', 'selected_rows'),
