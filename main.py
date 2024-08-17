@@ -1,4 +1,4 @@
-from dash import Dash, dash_table, dcc, html, Input, Output, State, callback, ctx
+from dash import Dash, dash_table, dcc, html, Input, Output, State, callback
 import pandas as pd
 import dash_auth
 
@@ -35,7 +35,7 @@ app.layout = html.Div([
                 "id": i,
                 "deletable": True,
                 "selectable": True,
-                "presentation": "markdown" if i == "link" else "input"
+                "presentation": "input"  # All columns are editable
             } for i in ['linkname', 'linkdescription', 'category', 'link']
         ],
         data=load_data().to_dict('records'),  # Initial data load
@@ -75,7 +75,6 @@ app.layout = html.Div([
     html.Div(id='datatable-interactivity-container'),
 ], style={'width': '100%', 'display': 'block', 'padding': '20px'})  # Ensuring full width and padding
 
-
 # Combined Callback for Loading and Modifying Data
 @callback(
     Output('datatable-interactivity', 'data'),
@@ -100,11 +99,9 @@ def manage_data(current_data, previous_data):
         return load_data().to_dict('records')
 
     # Handle updates: Save all changes back to CSV
-    current_df['link'] = current_df['link'].apply(lambda x: x.split('](')[-1][:-1] if '[' in x and '](' in x else x)
     current_df.to_csv(csv, index=False)
 
     return current_df.to_dict('records')
-
 
 @callback(
     Output('datatable-interactivity-container', "children"),
@@ -144,7 +141,6 @@ def update_graphs(rows, derived_virtual_selected_rows):
         )
         for column in ["pop", "lifeExp", "category"] if column in dff
     ]
-
 
 if __name__ == '__main__':
     app.run(debug=True)
